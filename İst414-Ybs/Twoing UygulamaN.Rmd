@@ -1,6 +1,13 @@
 ## **Twoing Algoritması - ToothGrowth, mtcars ve Titanic Veri Setleri ile Karşılaştırmalı Analiz**
 
-Twoing (İkileme), karar ağaçlarında kullanılan bir bölünme kriteridir. Gini ve Entropy’den farklı olarak, bir düğüm içindeki saflığı değil, bölünme sonucu oluşan iki alt düğümün birbirinden ne kadar farklı olduğunu ölçer. Yani Twoing, alt düğümlerin sınıf dağılımlarını mümkün olduğunca birbirinden uzaklaştıracak şekilde bölünme yapar. Bu özelliği sayesinde özellikle çok sınıflı problemlerde avantajlıdır, çünkü sınıfları iki gruba ayırarak her bölünmede en iyi ayrımı bulmaya çalışır. Twoing formülü, sol ve sağ düğümlerin büyüklüklerini ve sınıf dağılımları arasındaki farkları dikkate alarak hesaplanır. Pratikte Gini kadar yaygın kullanılmasa da, özellikle sınıfların dengeli dağılmadığı veya çok sayıda sınıf bulunan veri setlerinde başarılı sonuçlar verir. R’da rpart paketinde parms = list(split = "twoing") parametresi ile kullanılabilir.
+Twoing (İkileme), karar ağaçlarında kullanılan bir bölünme kriteridir. Gini ve Entropy’den farklı olarak, 
+bir düğüm içindeki saflığı değil, bölünme sonucu oluşan iki alt düğümün birbirinden ne kadar farklı olduğunu ölçer. 
+Yani Twoing, alt düğümlerin sınıf dağılımlarını mümkün olduğunca birbirinden uzaklaştıracak şekilde bölünme yapar.
+Bu özelliği sayesinde özellikle çok sınıflı problemlerde avantajlıdır, çünkü sınıfları iki gruba ayırarak her bölünmede 
+en iyi ayrımı bulmaya çalışır. Twoing formülü, sol ve sağ düğümlerin büyüklüklerini ve sınıf dağılımları arasındaki 
+farkları dikkate alarak hesaplanır. Pratikte Gini kadar yaygın kullanılmasa da, özellikle sınıfların dengeli 
+dağılmadığı veya çok sayıda sınıf bulunan veri setlerinde başarılı sonuçlar verir. 
+R’da rpart paketinde parms = list(split = "twoing") parametresi ile kullanılabilir.
 
 ```{r}
 options(encoding = "UTF-8")
@@ -9,7 +16,9 @@ Sys.setlocale("LC_ALL", "Turkish")
 
 ### Bölüm 1-ToothGrowth Veri Seti
 
-ToothGrowth, R içinde hazır olarak bulunan ve C vitamini takviyesinin diş büyümesine etkisini inceleyen bir veri setidir. Bu veri seti, domuz yavrularında farklı C vitamini dozlarının ve kaynaklarının diş uzunluğu üzerindekietkisini ölçmek için yapılan bir deneyin sonuçlarını içerir.
+ToothGrowth, R içinde hazır olarak bulunan ve C vitamini takviyesinin diş büyümesine etkisini inceleyen bir veri setidir. 
+Bu veri seti, domuz yavrularında farklı C vitamini dozlarının ve kaynaklarının diş uzunluğu üzerindekietkisini 
+ölçmek için yapılan bir deneyin sonuçlarını içerir.
 
 #### 1.1 Gerekli Paketlerin Yüklenmesi
 
@@ -124,7 +133,8 @@ box.palette = "Greens"
 )
 ```
 
-Grafikte tüm cp değerlerinde ROC (AUC) değeri yaklaşık 0.78 civarında sabit görünüyor. Bu, modelin cp değerinden etkilenmediğini gösterir.
+Grafikte tüm cp değerlerinde ROC (AUC) değeri yaklaşık 0.78 civarında sabit görünüyor.
+Bu, modelin cp değerinden etkilenmediğini gösterir.
 
 ```{r}
 # Test setinde tahmin yap
@@ -138,7 +148,8 @@ print(conf_matrix)
 
 ### Bölüm 2- Mtcars Veri Seti
 
-klasik mtcars veri seti kullanılarak bir aracın özelliklerine (beygir gücü, ağırlık, yakıt tüketimi vb.) bakarak şanzıman tipinin (Otomatik/Manuel) tahmin edilmesi amaçlanmıştır.
+klasik mtcars veri seti kullanılarak bir aracın özelliklerine (beygir gücü, ağırlık, yakıt tüketimi vb.) 
+bakarak şanzıman tipinin (Otomatik/Manuel) tahmin edilmesi amaçlanmıştır.
 
 ```{r}
 library(caret)
