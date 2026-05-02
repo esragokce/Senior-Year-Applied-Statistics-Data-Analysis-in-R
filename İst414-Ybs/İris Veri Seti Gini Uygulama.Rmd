@@ -1,0 +1,295 @@
+## İris Veri Seti ile Karar Ağaçları ve Gini Algoritması
+
+Data(iris) komutu ile R içerisinde hazır olarak bulunan ünlü iris veri seti kullanılır. Bu veri seti, 150 gözlemden oluşur ve her gözlemde bir çiçeğe ait sepal uzunluğu, sepal genişliği, petal uzunluğu, petal genişliği ve çiçek türü bilgilerini içerir.
+
+```{r}
+options(encoding = "UTF-8")
+Sys.setlocale("LC_ALL", "Turkish")
+```
+
+### 1. Veriyi Tanıma ve Hazırlama
+
+iris veri seti 3 farklı çiçek türünü içerir: Setosa, Versicolor ve Virginica. Gini algoritması, her adımda hangi
+yaprak ölçüsünün türleri en saf (pure) şekilde ayırdığını hesaplar.
+
+```{r}
+# rpart: Karar ağacı algoritması (Recursive Partitioning)
+# rpart.plot: Karar ağacını görselleştirme
+# caret: Sınıflandırma ve regresyon için kapsamlı araç seti
+library(rpart)
+library(rpart.plot)
+library(caret)
+```
+
+```{r}
+# Iris veri seti
+data(iris)
+
+# str() fonksiyonu: Değişken tiplerini, gözlem sayısını ve ilk değerleri gösterir
+str(iris)
+```
+
+Sepal.Length, Sepal.Width, Petal.Length ve Petal.Width değişkenleri sayısal (numeric) iken, Species değişkeni üç seviyeli bir faktör (factor) olarak tanımlanmıştır.
+
+```{r}
+# head() fonksiyonu: Veri setinin ilk gözlemlerini gösterir
+head(iris)
+```
+
+```{r}
+# Verinin özet istatistiklerini görüntüle
+# summary() fonksiyonu: Sayısal değişkenler için min, max, quartile, ortalama
+# Kategorik değişkenler için frekans dağılımı gösterir
+summary(iris)
+```
+
+### 2. Eğitim ve Test Setlerine Ayırma
+
+Modelin başarısını daha önce hiç görmediği veriler üzerinde test edebilmek için veri seti eğitim ve test olmak üzere iki kısma ayrılır.
+
+Bu işlem öncesinde set.seed() komutu ile rastgele sayı sabitlenir. Bu sayede her seferinde aynı rastgele bölünme elde edilir ve sonuçlar tekrarlanabilir hale gelir.
+
+createDataPartition(irisSpecies, p = 0.8, list = FALSE) komutu ile veri seti sınıf dağılımını koruyarak
+(stratified sampling) eğitim ve test setlerine ayrılır. Bu fonksiyonun ilk parametresi olan iris\$Species,
+bölme işleminin hedef değişkene göre yapılmasını sağlar. p = 0.8 parametresi verinin %80’inin eğitim,
+%20’sinin test setine ayrılmasını belirtir.
+
+list = FALSE parametresi ise sonucun liste değil, indeks vektörü olarak döndürülmesini sağlar. Oluşturulan trainIndex vektörü, eğitim setine alınacak satırların indekslerini içerir.
+
+train_data \<- iris[trainIndex, ] komutu ile indeks vektöründe belirtilen satırlar eğitim seti olarak atanır.
+test_data \<- iris[-trainIndex, ] komutu ise indeks vektöründe belirtilmeyen satırları test seti olarak atar.
+Burada eksi işareti, belirtilen indekslerin dışındaki satırları seçer.
+
+```{r}
+# set.seed():Rastgele işlemlerin tekrarlanabilir olmasını sağlar
+set.seed(456)          # Sonuçların her seferinde aynı çıkması için
+
+# createDataPartition(): Veriyi sınıf dağılımını koruyarak (stratified) böler
+# p = 0.8: Verinin %80'i eğitim, %20'si test olacak
+# list = FALSE: Sonucu liste yerine vektör olarak döndür
+trainIndex <- createDataPartition(iris$Species, p = 0.8, list = FALSE)
+
+# Eğitim seti: index'te belirtilen satırlar
+train_data <- iris[trainIndex, ]
+
+# Test seti: index'te belirtilmeyen satırlar (eksi işareti ile)
+test_data  <- iris[-trainIndex, ]
+```
+
+```{r}
+cat("Eğitim seti boyutu:", nrow(train_data), "gözlem\n")
+cat("Test seti boyutu:", nrow(test_data), "gözlem\n")
+```
+
+```{r}
+# Sınıf dağılımlarını kontrol et
+cat("\nEğitim seti sınıf dağılımı:\n")
+table(train_data$Species)
+
+cat("\nTest seti sınıf dağılımı:\n")
+table(test_data$Species)
+```
+
+Her sınıftan eğitim setine 40, test setine 10 gözlem düştüğü görülür.
+
+### 3. Gini Algoritması ile Model Kurulumu
+
+-   method = “class” parametresi bunun bir sınıflandırma problemi olduğunu,
+
+-   parms = list(split = “gini”) ise bölünme kriteri olarak Gini’nin kullanılacağını belirtir.
+
+1\. Kök düğümdeki Gini değerini hesapla
+2. Tüm değişkenler ve tüm olası bölünme noktaları için:
+Bölünme sonrası oluşan alt düğümlerin Gini değerlerini hesapla
+Ağırlıklı ortalama Gini değerini bul (Gini Kazancı)
+3. Gini değerini EN FAZLA düşüren bölünmeyi seç
+4. Durdurma kriteri sağlanana kadar tekrarlar.
+
+```{r}
+# rpart(): Recursive Partitioning (Karar Ağacı) modeli oluşturur
+# Formül: Species ~ .  (Hedef değişken = Species, tüm diğer değişkenler bağımsız)
+# data: Kullanılacak veri seti
+# control: Model hiperparametreleri
+iris_model <- rpart(
+Species ~ ., 
+data = train_data, 
+method = "class", 
+parms = list(split = "gini"),
+control = rpart.control(
+  cp = 0.01,                         # Karmaşıklık parametresi
+  minsplit = 20,                     # Düğüm bölünmesi için minimum gözlem sayısı
+  minbucket = 7                      # Yaprak düğümdeki minimum gözlem sayısı
+  )
+)
+
+# print(): Modelin detaylı yapısını gösterir
+print(iris_model)
+```
+
+```{r}
+# Değişken önem derecelerini görüntüle
+iris_model$variable.importance
+```
+
+### 4. Karar Ağacını Görselleştirme
+
+Gini algoritmasının veriyi nasıl dallara ayırdığını görmek için görselleştirme en iyi yoldur
+
+```{r}
+# extra = 104: Düğüm içinde sınıf ve yüzde gösterimi
+#  - 1: Sınıf gösterimi
+#  - 100: Yüzde gösterimi ekler
+rpart.plot(                    #Karar ağacını görselleştirir
+  iris_model,                       
+  type = 2,                    #Düğüm içi etiket stili(her düğümde kural gösterilir)
+  extra = 104,                 #Yaprakları aynı hizaya getir
+  fallen.leaves = TRUE,
+  main = "İris Çiçek Türleri Karar Ağacı\n(Gini Algoritması)",
+  box.palette = "Blues",       #Renklendirme
+  under = TRUE,                #Düğüm altına bilgi ekle
+  cex = 0.8                    #Yazı boyutu
+)
+```
+
+#### 1. Kök Düğüm (En Üst)
+
+Ağacın en tepesinde Petal.Length \< 2.5 koşulu bulunmaktadır. Bu, modelin ilk olarak taç yaprak (petal)
+uzunluğuna baktığını gösterir. Kök düğümde tüm 3 sınıf eşit dağılmıştır (0.33, 0.33, 0.33).
+
+#### 2. Sol Dal - Petal.Length \< 2.5
+
+Evet cevabı veren çiçekler (petal uzunluğu 2.5 cm’den kısa olanlar) sol dala gider. Bu dalda setosa sınıfına ait çiçeklerin tamamı (%100) bulunur. Burası bir yaprak düğümdür, yani buraya gelen tüm çiçekler setosa olarak sınıflandırılır. Verinin yaklaşık %33’ü bu dala düşer.
+
+#### 3. Sağ Dal - Petal.Length ≥ 2.5
+
+Hayır cevabı veren çiçekler (petal uzunluğu 2.5 cm veya daha uzun olanlar) sağ dala gider. Bu dalda artık
+setosa kalmamıştır (0.00). Sınıf dağılımı versicolor ve virginica arasında yarı yarıyadır (0.50 - 0.50). Verinin
+yaklaşık %67’si bu dala düşer. Bu düğümde ikinci bir bölünme yapılır: Petal.Width \< 1.7 (taç yaprak genişliği 1.7 cm’den küçük mü?).
+
+#### 4. Sol Dal - Petal.Width \< 1.7
+
+Evet cevabı veren çiçekler (petal genişliği 1.7 cm’den dar olanlar) bu dala gider. Bu dalda versicolor
+ağırlıktadır (%95), az miktarda virginica (%5) da bulunur. Verinin yaklaşık %34’ü bu dala düşer. Burası bir
+yaprak düğümdür, buraya gelen çiçekler versicolor olarak sınıflandırılır.
+
+#### 5. Sağ Dal - Petal.Width ≥ 1.7
+
+Hayır cevabı veren çiçekler (petal genişliği 1.7 cm veya daha geniş olanlar) bu dala gider. Bu dalda virginica ağırlıktadır (%97), çok az versicolor (%3) da bulunur. Verinin yaklaşık %32’si bu dala düşer. Burası bir yaprak düğümdür, buraya gelen çiçekler virginica olarak sınıflandırılır.
+
+### 5. Modelin Tahmin Gücü ve Değerlendirme
+
+Şimdi ayırdığımız test verisini modele soralım ve ne kadar doğru bildiğini görelim.
+
+#### Karışıklık Matrisi ve Detaylı İstatistikler
+
+------------------------------------------------------------------------
+
+**confusionMatrix():** caret paketinden, model başarısını ölçen fonksiyon
+
+**PARAMETRELER:**
+
+**tahminler:** Modelin tahmin ettiği değerler
+
+**test_data\$Species:** Gerçek değerler (test setindeki gerçek sonuçlar)
+
+**KARIŞIKLIK MATRİSİ NEDİR?**
+
+GERÇEK DEĞERLER
+
+TRUE FALSE
+
+TAHMİN TRUE [TP] [FP]
+
+FALSE [FN] [TN]
+
+*TP (True Positive):* Doğru tahmin edilen kazanmalar
+
+*TN (True Negative):* Doğru tahmin edilen kazanmamalar
+
+*FP (False Positive):* Yanlış tahmin edilen kazanmalar (Tip 1 hata)
+
+*FN (False Negative):* Yanlış tahmin edilen kazanmamalar (Tip 2 hata)
+
+**GÖSTERİLEN İSTATİSTİKLER:**
+
+**1. KARIŞIKLIK MATRİSİ (Confusion Matrix):**
+
+\- Yukarıdaki tablonun sayısal hali
+
+**2. DOĞRULUK (Accuracy):**
+
+\- (TP + TN) / (Toplam Örnek)
+
+\- Modelin genel başarı yüzdesi
+
+**3. HASSASİYET (Sensitivity / Recall):**
+
+\- TP / (TP + FN)
+
+\- Gerçek kazanmaların yüzde kaçını doğru tahmin etti
+
+**4. KESİNLİK (Precision / Pos Pred Value):**
+
+\- TP / (TP + FP)
+
+\- "Kazanır" dediklerinin yüzde kaçı gerçekten kazandı
+
+**5. ÖZGÜLLÜK (Specificity):**
+
+\- TN / (TN + FP)
+
+\- Gerçek kazanmamaların yüzde kaçını doğru tahmin etti
+
+**6. KAPPA İSTATİSTİĞİ (Kappa):**
+
+\- Şans eseri doğruluktan ne kadar iyi olduğu
+
+\- 0 = şans eseri, 1 = mükemmel uyum
+
+```{r}
+# predict(): Model ile tahmin yapar
+# newdata: Tahmin yapılacak veri seti
+# type = "class": Sınıf tahmini (type = "prob" olasılık verir)
+tahminler <- predict(iris_model, newdata = test_data, type = "class")
+
+# confusionMatrix(): Karmaşıklık matrisi ve performans metriklerini hesaplar
+# İlk parametre: Tahmin edilen değerler
+# İkinci parametre: Gerçek değerler
+sonuclar <- confusionMatrix(tahminler, test_data$Species)
+
+# Tüm sonuçları yazdır
+print(sonuclar)
+```
+
+Bu model, iris çiçek türlerini sınıflandırmada %90 genel doğruluk oranı ile oldukça başarılı bir performans
+sergilemektedir. 30 test gözleminden 27’sini doğru tahmin eden model, yalnızca 3 hata yapmıştır.
+
+**setosa sınıfı :** Model, setosa türündeki 10 çiçeğin tamamını doğru tanımıştır. Hiçbir setosa çiçeği yanlış
+sınıflandırılmamış, diğer türlerden de hiçbiri setosa olarak tahmin edilmemiştir. Bu, setosa türünün diğer
+iki türden petal ölçüleriyle tamamen ayrıştığını ve modelin bu ayrımı mükemmel şekilde öğrendiğini
+göstermektedir.
+
+**versicolor sınıfı :** 10 versicolor çiçeğinden 9’u doğru tanınmış, ancak 1 tanesi yanlışlıkla virginica olarak
+sınıflandırılmıştır. Bu hata, versicolor ve virginica türlerinin petal ölçülerinin birbirine yakın olmasından
+kaynaklanmaktadır. Özellikle petal uzunluğu ve genişliği bakımından bu iki tür arasında bir örtüşme
+bölgesi bulunmaktadır.
+
+**virginica sınıfı**:10 virginica çiçeğinden 8’i doğru tanınmış, 2 tanesi ise versicolor olarak yanlış
+sınıflandırılmıştır. Bu, virginica sınıfının en fazla hata alan sınıf olduğunu göstermektedir. Model, virginica
+türünü versicolor’dan ayırmada bazı zorluklar yaşamaktadır. Bu durum, her iki türün de benzer petal
+özelliklerine sahip olmasından kaynaklanmaktadır.
+
+**Accuracy (Doğruluk):** 0.9 (%90) Model, test setindeki 30 çiçeğin 27’sini doğru sınıflandırmıştır. Bu oran,
+modelin oldukça başarılı olduğunu göstermektedir. Özellikle 3 sınıflı bir problemde %90 doğruluk,
+rastgele tahmine göre çok daha iyi bir sonuçtur.
+
+**95% Confidence Interval (Güven Aralığı)**: (0.7347, 0.9789) Doğruluk oranının %95 güvenle %73.47 ile
+%97.89 arasında olduğu söylenebilir. Bu aralığın geniş olması, test setinin nispeten küçük olmasından
+(30 gözlem) kaynaklanmaktadır. Daha büyük bir test seti ile bu aralık daralacaktır. Alt sınırın %73.47
+olması, en kötü durumda bile modelin başarısının oldukça iyi olacağını göstermektedir.
+
+**P-Value [Acc \> NIR]:** 1.665e-10 p-değeri 0.05’ten çok küçük olduğu için , modelin başarısının tesadüf
+olmadığı, gerçekten anlamlı bir öğrenme gerçekleştirdiği sonucuna varılır.
+
+**Detection Rate :** Modelin doğru tahmin ettiği gözlemlerin toplam içindeki oranı
+**Detection Prevalence:** Modelin tahmin ettiği gözlemlerin toplam içindeki oranı
