@@ -1,6 +1,8 @@
 ## İris Veri Seti ile Karar Ağaçları ve Gini Algoritması
 
-Data(iris) komutu ile R içerisinde hazır olarak bulunan ünlü iris veri seti kullanılır. Bu veri seti, 150 gözlemden oluşur ve her gözlemde bir çiçeğe ait sepal uzunluğu, sepal genişliği, petal uzunluğu, petal genişliği ve çiçek türü bilgilerini içerir.
+Data(iris) komutu ile R içerisinde hazır olarak bulunan ünlü iris veri seti kullanılır. 
+Bu veri seti, 150 gözlemden oluşur ve her gözlemde bir çiçeğe ait sepal uzunluğu, sepal genişliği,
+petal uzunluğu, petal genişliği ve çiçek türü bilgilerini içerir.
 
 ```{r}
 options(encoding = "UTF-8")
@@ -9,8 +11,8 @@ Sys.setlocale("LC_ALL", "Turkish")
 
 ### 1. Veriyi Tanıma ve Hazırlama
 
-iris veri seti 3 farklı çiçek türünü içerir: Setosa, Versicolor ve Virginica. Gini algoritması, her adımda hangi
-yaprak ölçüsünün türleri en saf (pure) şekilde ayırdığını hesaplar.
+iris veri seti 3 farklı çiçek türünü içerir: Setosa, Versicolor ve Virginica. Gini algoritması, 
+her adımda hangi yaprak ölçüsünün türleri en saf (pure) şekilde ayırdığını hesaplar.
 
 ```{r}
 # rpart: Karar ağacı algoritması (Recursive Partitioning)
@@ -29,7 +31,8 @@ data(iris)
 str(iris)
 ```
 
-Sepal.Length, Sepal.Width, Petal.Length ve Petal.Width değişkenleri sayısal (numeric) iken, Species değişkeni üç seviyeli bir faktör (factor) olarak tanımlanmıştır.
+Sepal.Length, Sepal.Width, Petal.Length ve Petal.Width değişkenleri sayısal (numeric) iken, 
+Species değişkeni üç seviyeli bir faktör (factor) olarak tanımlanmıştır.
 
 ```{r}
 # head() fonksiyonu: Veri setinin ilk gözlemlerini gösterir
@@ -45,16 +48,19 @@ summary(iris)
 
 ### 2. Eğitim ve Test Setlerine Ayırma
 
-Modelin başarısını daha önce hiç görmediği veriler üzerinde test edebilmek için veri seti eğitim ve test olmak üzere iki kısma ayrılır.
+Modelin başarısını daha önce hiç görmediği veriler üzerinde test edebilmek için veri seti eğitim ve test olmak üzere 
+iki kısma ayrılır.
 
-Bu işlem öncesinde set.seed() komutu ile rastgele sayı sabitlenir. Bu sayede her seferinde aynı rastgele bölünme elde edilir ve sonuçlar tekrarlanabilir hale gelir.
+Bu işlem öncesinde set.seed() komutu ile rastgele sayı sabitlenir. Bu sayede her seferinde aynı rastgele bölünme 
+elde edilir ve sonuçlar tekrarlanabilir hale gelir.
 
 createDataPartition(irisSpecies, p = 0.8, list = FALSE) komutu ile veri seti sınıf dağılımını koruyarak
 (stratified sampling) eğitim ve test setlerine ayrılır. Bu fonksiyonun ilk parametresi olan iris\$Species,
 bölme işleminin hedef değişkene göre yapılmasını sağlar. p = 0.8 parametresi verinin %80’inin eğitim,
 %20’sinin test setine ayrılmasını belirtir.
 
-list = FALSE parametresi ise sonucun liste değil, indeks vektörü olarak döndürülmesini sağlar. Oluşturulan trainIndex vektörü, eğitim setine alınacak satırların indekslerini içerir.
+list = FALSE parametresi ise sonucun liste değil, indeks vektörü olarak döndürülmesini sağlar.
+Oluşturulan trainIndex vektörü, eğitim setine alınacak satırların indekslerini içerir.
 
 train_data \<- iris[trainIndex, ] komutu ile indeks vektöründe belirtilen satırlar eğitim seti olarak atanır.
 test_data \<- iris[-trainIndex, ] komutu ise indeks vektöründe belirtilmeyen satırları test seti olarak atar.
@@ -158,13 +164,16 @@ uzunluğuna baktığını gösterir. Kök düğümde tüm 3 sınıf eşit dağı
 
 #### 2. Sol Dal - Petal.Length \< 2.5
 
-Evet cevabı veren çiçekler (petal uzunluğu 2.5 cm’den kısa olanlar) sol dala gider. Bu dalda setosa sınıfına ait çiçeklerin tamamı (%100) bulunur. Burası bir yaprak düğümdür, yani buraya gelen tüm çiçekler setosa olarak sınıflandırılır. Verinin yaklaşık %33’ü bu dala düşer.
+Evet cevabı veren çiçekler (petal uzunluğu 2.5 cm’den kısa olanlar) sol dala gider. Bu dalda setosa 
+sınıfına ait çiçeklerin tamamı (%100) bulunur. Burası bir yaprak düğümdür, yani buraya gelen tüm çiçekler
+setosa olarak sınıflandırılır. Verinin yaklaşık %33’ü bu dala düşer.
 
 #### 3. Sağ Dal - Petal.Length ≥ 2.5
 
 Hayır cevabı veren çiçekler (petal uzunluğu 2.5 cm veya daha uzun olanlar) sağ dala gider. Bu dalda artık
 setosa kalmamıştır (0.00). Sınıf dağılımı versicolor ve virginica arasında yarı yarıyadır (0.50 - 0.50). Verinin
-yaklaşık %67’si bu dala düşer. Bu düğümde ikinci bir bölünme yapılır: Petal.Width \< 1.7 (taç yaprak genişliği 1.7 cm’den küçük mü?).
+yaklaşık %67’si bu dala düşer. Bu düğümde ikinci bir bölünme yapılır: Petal.Width \< 1.7 (taç yaprak genişliği
+1.7 cm’den küçük mü?).
 
 #### 4. Sol Dal - Petal.Width \< 1.7
 
@@ -174,7 +183,9 @@ yaprak düğümdür, buraya gelen çiçekler versicolor olarak sınıflandırıl
 
 #### 5. Sağ Dal - Petal.Width ≥ 1.7
 
-Hayır cevabı veren çiçekler (petal genişliği 1.7 cm veya daha geniş olanlar) bu dala gider. Bu dalda virginica ağırlıktadır (%97), çok az versicolor (%3) da bulunur. Verinin yaklaşık %32’si bu dala düşer. Burası bir yaprak düğümdür, buraya gelen çiçekler virginica olarak sınıflandırılır.
+Hayır cevabı veren çiçekler (petal genişliği 1.7 cm veya daha geniş olanlar) bu dala gider. Bu dalda 
+virginica ağırlıktadır (%97), çok az versicolor (%3) da bulunur. Verinin yaklaşık %32’si bu dala düşer. 
+Burası bir yaprak düğümdür, buraya gelen çiçekler virginica olarak sınıflandırılır.
 
 ### 5. Modelin Tahmin Gücü ve Değerlendirme
 
